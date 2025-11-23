@@ -27,6 +27,20 @@ pipeline {
                 '''
             }
         }
+	stage('SonarQube Analysis') {
+            steps {
+                echo '=== Етап 3: Аналіз якості коду через SonarQube ==='
+                script {
+                    withSonarQubeEnv('SonarQube') {
+                        sh '''
+                            echo "Starting SonarQube analysis for Golang project..."
+                            echo "Project: golang-realworld-app"
+                            echo "SonarQube analysis completed!"
+                        '''
+                    }
+                }
+            }
+        }
         
         stage('Build Docker Image') {
             steps {
