@@ -1,4 +1,4 @@
-package main     // test 2
+package main     
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/jinzhu/gorm"
-	"github.com/gothinkster/golang-gin-realworld-example-app/articles"
+	"github.com/gothinkster/golang-gin-realworld-example-app/articles" // test
 	"github.com/gothinkster/golang-gin-realworld-example-app/common"
 	"github.com/gothinkster/golang-gin-realworld-example-app/users"
 )
