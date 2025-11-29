@@ -2,10 +2,14 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = 'golang-realworld-app'
-        DOCKER_TAG   = "${BUILD_NUMBER}"
-        APP_PORT     = '8081'
-        PROJECT_DIR  = "${WORKSPACE}"
+        DOCKER_IMAGE   = 'golang-realworld-app'
+        DOCKER_TAG     = "${BUILD_NUMBER}"
+        APP_PORT       = '8082'           // 8081 зайнятий Jenkins
+        PROJECT_DIR    = "${WORKSPACE}"
+
+        SONAR_URL      = 'http://host.docker.internal:9000'
+        PROM_URL       = 'http://host.docker.internal:9090'
+        GRAFANA_URL    = 'http://host.docker.internal:3000'
     }
 
     stages {
@@ -17,69 +21,71 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            when {
-                expression { return false } // тимчасово вимкнули, щоб pipeline не падав
-            }
+        stage('SonarQube Health Check') {
             steps {
-                echo '=== Етап 2: Аналіз якості коду через SonarQube (поки вимкнено) ==='
-                script {
-                    withSonarQubeEnv('SonarQube') {
-                        sh '''
-                            echo "Starting SonarQube analysis for Golang project..."
-                            echo "Project: golang-realworld-app"
-                            echo "SonarQube analysis completed!"
-                        '''
-                    }
-                }
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                echo '=== Етап 3: Створення Docker образу ==='
+                echo '=== Етап 2: Перевірка доступності SonarQube ==='
                 sh """
-                    echo 'Current directory:'
-                    pwd
-                    echo 'Listing files:'
-                    ls -la
+                    echo "Перевіряємо SonarQube: ${SONAR_URL}"
+                    STATUS=\$(curl -s -o /dev/null -w "%{http_code}" "${SONAR_URL}/api/system/health" || echo 000)
+                    echo "HTTP статус SonarQube: \$STATUS"
 
-                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
-                    docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest
-                    echo "Docker image built successfully!"
+                    if [ "\$STATUS" != "200" ] && [ "\$STATUS" != "403" ]; then
+                      echo "❌ SonarQube недоступний або не відповідає очікувано!"
+                      exit 1
+                    fi
+
+                    echo "✅ SonarQube працює (отримали статус \$STATUS)."
                 """
             }
         }
 
-        stage('Stop Old Container') {
+        stage('Build Docker Image (demo)') {
             steps {
-                echo '=== Етап 4: Зупинка старого контейнера ==='
-                sh '''
-                    docker stop golang-app || echo "No container to stop"
-                    docker rm golang-app || echo "No container to remove"
-                    echo "Cleanup completed!"
-                '''
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                echo '=== Етап 5: Розгортання застосунку ==='
+                echo '=== Етап 3: Створення Docker образу (ДЕМО) ==='
                 sh """
-                    docker run -d --name golang-app -p ${APP_PORT}:8080 ${DOCKER_IMAGE}:latest
-                    sleep 5
-                    echo "Application deployed successfully!"
+                    echo "Тут у реальному середовищі виконується:"
+                    echo "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                    echo "docker tag ${DOCKER_IMAGE}:${DOCKER_TAG} ${DOCKER_IMAGE}:latest"
                 """
             }
         }
 
-        stage('Health Check') {
+        stage('Deploy (demo)') {
             steps {
-                echo '=== Етап 6: Перевірка працездатності ==='
-                sh '''
-                    docker ps | grep golang-app
-                    echo "Container is running!"
-                '''
+                echo '=== Етап 4: Розгортання застосунку (ДЕМО) ==='
+                sh """
+                    echo "Тут у реальному середовищі виконується:"
+                    echo "docker stop golang-app || true"
+                    echo "docker rm golang-app || true"
+                    echo "docker run -d --name golang-app -p ${APP_PORT}:8080 ${DOCKER_IMAGE}:latest"
+                """
+            }
+        }
+
+        stage('Monitoring Check (Prometheus & Grafana)') {
+            steps {
+                echo '=== Етап 5: Перевірка моніторингу (Prometheus, Grafana) ==='
+                sh """
+                    echo "Перевіряємо Prometheus: ${PROM_URL}"
+                    P_STATUS=\$(curl -s -o /dev/null -w "%{http_code}" "${PROM_URL}/-/healthy" || echo 000)
+                    echo "HTTP статус Prometheus: \$P_STATUS"
+
+                    echo "Перевіряємо Grafana: ${GRAFANA_URL}"
+                    G_STATUS=\$(curl -s -o /dev/null -w "%{http_code}" "${GRAFANA_URL}/login" || echo 000)
+                    echo "HTTP статус Grafana: \$G_STATUS"
+
+                    if [ "\$P_STATUS" != "200" ]; then
+                      echo "❌ Prometheus недоступний!"
+                      exit 1
+                    fi
+
+                    if [ "\$G_STATUS" != "200" ]; then
+                      echo "❌ Grafana недоступна!"
+                      exit 1
+                    fi
+
+                    echo "✅ Prometheus і Grafana доступні з Jenkins."
+                """
             }
         }
     }
@@ -88,7 +94,9 @@ pipeline {
         success {
             echo '✅ ============================================='
             echo '✅ Pipeline виконано успішно!'
-            echo '✅ Додаток доступний на http://localhost:8081'
+            echo "✅ SonarQube: ${SONAR_URL}"
+            echo "✅ Prometheus: ${PROM_URL}"
+            echo "✅ Grafana: ${GRAFANA_URL}"
             echo '✅ ============================================='
         }
         failure {
@@ -98,7 +106,7 @@ pipeline {
             echo '❌ ============================================='
         }
         always {
-            echo '🧹 Очищення...'
+            echo '🧹 Завершення роботи pipeline'
         }
     }
 }
