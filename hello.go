@@ -12,7 +12,7 @@ import (
 )
 
 func Migrate(db *gorm.DB) {
-	users.AutoMigrate()
+	users.AutoMigrate()// test auto trigger from github
 	db.AutoMigrate(&articles.ArticleModel{})
 	db.AutoMigrate(&articles.TagModel{})
 	db.AutoMigrate(&articles.FavoriteModel{})
