@@ -8,7 +8,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/gothinkster/golang-gin-realworld-example-app/articles" // test
 	"github.com/gothinkster/golang-gin-realworld-example-app/common"
-	"github.com/gothinkster/golang-gin-realworld-example-app/users"
+	"github.com/gothinkster/golang-gin-realworld-example-app/users" //test 2
 )
 
 func Migrate(db *gorm.DB) {
