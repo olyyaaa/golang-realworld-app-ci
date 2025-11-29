@@ -3,8 +3,28 @@ version: '3.8'
 services:
   app:
     build: .
+    container_name: golang-app
     ports:
       - "8080:8080"
     restart: unless-stopped
     environment:
       - GIN_MODE=release
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+  node-exporter:
+    image: prom/node-exporter
+    container_name: node-exporter
+    ports:
+      - "9100:9100"

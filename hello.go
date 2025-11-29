@@ -1,4 +1,4 @@
-package main     // CI and CD test change
+package main     // test
 
 import (
 	"fmt"
